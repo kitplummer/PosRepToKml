@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<jbossesb parameterReloadSecs="5"
+ xmlns="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd http://anonsvn.jboss.org/repos/labs/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd">
+ <providers>
+  <jms-provider connection-factory="ConnectionFactory" name="JMS">
+   <jms-bus busid="norm-in">
+    <jms-message-filter dest-name="topic/norm_in" dest-type="TOPIC"/>
+   </jms-bus>
+  </jms-provider>
+ </providers>
+ <services>
+  <service category="NormIn" description="Process POSREPs to KML" name="PosRepProcessor">
+   <listeners>
+    <jms-listener busidref="norm-in" is-gateway="false" name="JMS-Norm_In"/>
+   </listeners>
+   <actions mep="OneWay">
+    <action class="com.dozersoftware.snap.PosRepProcessor" name="target" process="process"/>
+   </actions>
+  </service>
+ </services>
+</jbossesb>
