@@ -1,22 +1,61 @@
 <?xml version="1.0"?>
 <jbossesb parameterReloadSecs="5"
- xmlns="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd"
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd http://anonsvn.jboss.org/repos/labs/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd">
- <providers>
-  <jms-provider connection-factory="ConnectionFactory" name="JMS">
-   <jms-bus busid="norm-in">
-    <jms-message-filter dest-name="topic/norm_in" dest-type="TOPIC"/>
-   </jms-bus>
-  </jms-provider>
- </providers>
- <services>
-  <service category="NormIn" description="Process POSREPs to KML" name="PosRepProcessor">
-   <listeners>
-    <jms-listener busidref="norm-in" is-gateway="false" name="JMS-Norm_In"/>
-   </listeners>
-   <actions mep="OneWay">
-    <action class="com.dozersoftware.snap.PosRepProcessor" name="target" process="process"/>
-   </actions>
-  </service>
- </services>
+	xmlns="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://anonsvn.labs.jboss.com/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd http://anonsvn.jboss.org/repos/labs/labs/jbossesb/trunk/product/etc/schemas/xml/jbossesb-1.2.0.xsd">
+	<globals>
+		<!-- Security setting for all http-providers and all EBWSs in this jboss-esb.xml 
+			file. -->
+		<!--<war-security method="BASIC" domain="JBossWS" />  uname: "kermit" pw: "thefrog" -->
+	</globals>
+	<providers>
+		<jms-provider connection-factory="ConnectionFactory"
+			name="JMS">
+			<jms-bus busid="norm-in">
+				<jms-message-filter dest-name="topic/norm_in"
+					dest-type="TOPIC" />
+			</jms-bus>
+		</jms-provider>
+		<http-provider name="http">
+            <http-bus busid="secureFriends">
+                <!-- Only users in the "friend" role are allowed
+                     access via the "GET" method.  Unspecified
+                     methods are not protected (i.e. are allowed)... -->
+                <!--<allowed-roles>
+                    <role name="friend" />
+                </allowed-roles>
+                <protected-methods>
+                    <method name="GET" />
+                    <method name="POST" />
+                </protected-methods>
+            --></http-bus>
+
+            <!-- Global exception mappings file... -->
+            <exception mappingsFile="/http-exception-mappings.properties" />
+        </http-provider>
+	</providers>
+	<services>
+		<service category="NormIn" description="Process POSREPs to KML"
+			name="PosRepProcessor">
+			<listeners>
+				<jms-listener busidref="norm-in" is-gateway="false"
+					name="JMS-Norm_In" />
+			</listeners>
+			<actions mep="OneWay">
+				<action class="com.dozersoftware.snap.PosRepProcessor" name="target"
+					process="process" />
+			</actions>
+		</service>
+		
+		<service category="KML" name="List" description="" invmScope="GLOBAL">
+            <listeners>
+                <!-- Receives: http://<host>:<port>/Quickstart_http_gateway/http/sales/* but will be forced to
+                               authenticate because the "sales" bus has basic auth configured (above)... -->
+                <http-gateway name="kml" busidref="secureFriends" urlPattern="kml/*" />
+            </listeners>
+            <actions mep="RequestResponse">
+                <action name="print" class="com.dozersoftware.snap.PosRepProcessor" process="http"/>
+            </actions>
+        </service>
+	</services>
 </jbossesb>

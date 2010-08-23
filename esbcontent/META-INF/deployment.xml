@@ -1,0 +1,3 @@
+<jbossesb-deployment>
+	<depends>jboss.esb.quickstart.destination:service=Topic,name=norm_in</depends>
+</jbossesb-deployment>
