@@ -90,8 +90,15 @@ public class PosRepProcessor extends AbstractActionLifecycle {
 					this.map.put(handle, uri);
 
 				}
+			} else if(doc.getDocumentElement().getAttribute("type").equals("disconnect")) {
+					if(this.map.containsKey(handle)) {
+						System.out.println("SNAP: Disconnecting " + handle + "'s handle...");
+
+						messageStore.removeMessage(this.map.get(handle), "PosRep");
+						this.map.remove(handle);
+					}
 			} else {
-				System.out.println("SNAP: Not a PosRep...");
+				System.out.println("SNAP: Not a PosRep, or disconnect...");
 			}
 		} catch (ParserConfigurationException e) {
 			// TODO Auto-generated catch block
