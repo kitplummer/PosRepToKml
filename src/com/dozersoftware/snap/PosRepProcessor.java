@@ -37,51 +37,61 @@ import de.micromata.opengis.kml.v_2_2_0.Kml;
 public class PosRepProcessor extends AbstractActionLifecycle {
 
 	protected ConfigTree _config;
-    private Service service;
-    protected Map<String, URI> map;
+	private Service service;
+	protected Map<String, URI> map;
 	protected MessageStore messageStore;
-	
-    public PosRepProcessor(ConfigTree config) {
+
+	public PosRepProcessor(ConfigTree config) {
 		_config = config;
-        service = new Service(_config.getParent().getAttribute(ListenerTagNames.SERVICE_CATEGORY_NAME_TAG), _config.getParent().getAttribute(ListenerTagNames.SERVICE_NAME_TAG));
-        map = new HashMap<String, URI>();
-        
-        // Clean out the PosRep store...
-        try {
+		service = new Service(_config.getParent().getAttribute(
+				ListenerTagNames.SERVICE_CATEGORY_NAME_TAG), _config
+				.getParent().getAttribute(ListenerTagNames.SERVICE_NAME_TAG));
+		map = new HashMap<String, URI>();
+
+		// Clean out the PosRep store...
+		try {
 			String messageStoreClass = "org.jboss.internal.soa.esb.persistence.format.db.DBMessageStoreImpl";
-			messageStore = MessageStoreFactory.getInstance().getMessageStore(messageStoreClass);
+			messageStore = MessageStoreFactory.getInstance().getMessageStore(
+					messageStoreClass);
 			Map<URI, Message> pre = messageStore.getAllMessages("PosRep");
 			Iterator<URI> it = pre.keySet().iterator();
-			while(it.hasNext()) {
+			while (it.hasNext()) {
 				messageStore.removeMessage(it.next(), "PosRep");
 			}
 		} catch (MessageStoreException e) {
 			e.printStackTrace();
 		}
-        //Try to pull the message out
-       
+		// Try to pull the message out
+
 	}
 
 	public Message process(Message message) {
 		System.out.println("SNAP PosRep: " + message.getBody().get());
 		try {
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory
+					.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-			String raw = (String)message.getBody().get();
-			Document doc = dBuilder.parse(new ByteArrayInputStream(raw.getBytes()));
-			
+			String raw = (String) message.getBody().get();
+			Document doc = dBuilder.parse(new ByteArrayInputStream(raw
+					.getBytes()));
+
 			doc.getDocumentElement().normalize();
 			String handle = doc.getDocumentElement().getAttribute("sender");
-			if(this.map.containsKey(handle)){
-				System.out.println("SNAP: Updating Platform PosRep...");
-				messageStore.removeMessage(this.map.get(handle), "PosRep");
-				URI uri = messageStore.addMessage(message, "PosRep");
-				this.map.put(handle, uri);
-			} else {
-				System.out.println("SNAP: New PosRep...");
-				URI uri = messageStore.addMessage(message, "PosRep");
-				this.map.put(handle, uri);
+			
+			if (doc.getDocumentElement().getAttribute("type").equals("text")) {
+				if (this.map.containsKey(handle)) {
+					System.out.println("SNAP: Updating Platform PosRep...");
+					messageStore.removeMessage(this.map.get(handle), "PosRep");
+					URI uri = messageStore.addMessage(message, "PosRep");
+					this.map.put(handle, uri);
+				} else {
+					System.out.println("SNAP: New PosRep...");
+					URI uri = messageStore.addMessage(message, "PosRep");
+					this.map.put(handle, uri);
 
+				}
+			} else {
+				System.out.println("SNAP: Not a PosRep...");
 			}
 		} catch (ParserConfigurationException e) {
 			// TODO Auto-generated catch block
@@ -96,24 +106,25 @@ public class PosRepProcessor extends AbstractActionLifecycle {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return message;
 	}
-	
+
 	public Message http(Message message) throws ActionProcessingException {
 
-        System.out.println("&&&&&&&&&&&&&&&& PosRepProcessor &&&&&&&&&&&&&&&&&&&&&");
-        System.out.println("");
-        System.out.println("Service: " + service);
-        System.out.println("");
-        //System.out.println("------------Http Request Info (XStream Encoded)-------------------");
-		//HttpRequest requestInfo = HttpRequest.getRequest(message);
-        //String requestInfoXML;
+		System.out
+				.println("&&&&&&&&&&&&&&&& PosRepProcessor &&&&&&&&&&&&&&&&&&&&&");
+		System.out.println("");
+		System.out.println("Service: " + service);
+		System.out.println("");
+		// System.out.println("------------Http Request Info (XStream Encoded)-------------------");
+		// HttpRequest requestInfo = HttpRequest.getRequest(message);
+		// String requestInfoXML;
 
-        //XStream xstream = new XStream();
-        //requestInfoXML = xstream.toXML(requestInfo);
+		// XStream xstream = new XStream();
+		// requestInfoXML = xstream.toXML(requestInfo);
 
-        //System.out.println(requestInfoXML);
+		// System.out.println(requestInfoXML);
 
 		System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
 
@@ -124,38 +135,42 @@ public class PosRepProcessor extends AbstractActionLifecycle {
 			Iterator<URI> it = msgs.keySet().iterator();
 			System.out.println("Tracking for :" + msgs.size() + " records");
 			while (it.hasNext()) {
-				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+				DocumentBuilderFactory dbFactory = DocumentBuilderFactory
+						.newInstance();
 				DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-				String raw = (String)msgs.get(it.next()).getBody().get();
-				
-				Document doc = dBuilder.parse(new ByteArrayInputStream(raw.getBytes()));
-				
+				String raw = (String) msgs.get(it.next()).getBody().get();
+
+				Document doc = dBuilder.parse(new ByteArrayInputStream(raw
+						.getBytes()));
+
 				doc.getDocumentElement().normalize();
 				NodeList body = doc.getElementsByTagName("BODY");
 				String handle = doc.getDocumentElement().getAttribute("sender");
 				Node e = body.item(0);
-				System.out.println("SNAP: " + handle + "'s PosRep -> " + e.getTextContent());
+				System.out.println("SNAP: " + handle + "'s PosRep -> "
+						+ e.getTextContent());
 				JsonElement jse = new JsonParser().parse(e.getTextContent());
 				if (jse.isJsonObject()) {
-					System.out.println("We got the right thing: " + jse.toString());
-					JsonArray ja = jse.getAsJsonObject().getAsJsonArray("POSREP");
-					//{"POSREP": [16,"Aug 17, 2010 3:11:00 AM","31.74","-111.11"]}
+					System.out.println("We got the right thing: "
+							+ jse.toString());
+					JsonArray ja = jse.getAsJsonObject().getAsJsonArray(
+							"POSREP");
+					// {"POSREP":
+					// [16,"Aug 17, 2010 3:11:00 AM","31.74","-111.11"]}
 					Double lat = ja.get(2).getAsDouble();
 					Double lng = ja.get(3).getAsDouble();
-					
-					kml.createAndSetPlacemark()
-						.withName(handle).withOpen(Boolean.TRUE)
-						.createAndSetPoint()
-						.addToCoordinates(lng, lat);
+
+					kml.createAndSetPlacemark().withName(handle)
+							.withOpen(Boolean.TRUE).createAndSetPoint()
+							.addToCoordinates(lng, lat);
 				} else {
 					System.out.println("Not an Array!");
 				}
-				
-				
+
 			}
 
 			System.out.println("Processed all positions...");
-			kml.marshal(sw);        
+			kml.marshal(sw);
 
 			message.getBody().add(sw.toString());
 		} catch (DOMException e) {
@@ -178,14 +193,14 @@ public class PosRepProcessor extends AbstractActionLifecycle {
 			e.printStackTrace();
 		}
 
-        return message;
+		return message;
 
 	}
-	
+
 	public void exceptionHandler(Message message, Throwable exception) {
-		   System.out.println("!ERROR!");
-		   System.out.println(exception.getMessage());
-		   System.out.println("For Message: ");
-		   System.out.println(message.getBody().get());
+		System.out.println("!ERROR!");
+		System.out.println(exception.getMessage());
+		System.out.println("For Message: ");
+		System.out.println(message.getBody().get());
 	}
 }
